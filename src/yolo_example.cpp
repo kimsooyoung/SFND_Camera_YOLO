@@ -18,12 +18,15 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
+#include "dataStructure.h"
+
 using namespace std;
 
 int main()
 {
     // load image from file
-    cv::Mat img = cv::imread("../images/s_thrun.jpg");
+    cv::Mat img = cv::imread("../images/0000000000.png");
+    std::vector<BoundingBox> bBoxes;
 
     // load class names from file
     string yoloBasePath = "../dat/yolo/";
@@ -103,6 +106,56 @@ int main()
         }
     }
 
+    // perform non-maxima suppression
+    float nmsThreshold = 0.4; // Non-maximum suppression threshold
+    vector<int> indices;
+    cv::dnn::NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
+
+    for (auto it = indices.begin(); it != indices.end(); ++it)
+    {
+        BoundingBox bBox;
+
+        bBox.roi = boxes[*it];
+        bBox.classID = classIds[*it];
+        bBox.confidence = confidences[*it];
+        bBox.boxID = (int)bBoxes.size(); // zero-based unique identifier for this bounding box
+
+        bBoxes.push_back(bBox);
+    }
+
+    // show results
+    if (bVis)
+    {
+
+        cv::Mat visImg = img.clone();
+        for (auto it = bBoxes.begin(); it != bBoxes.end(); ++it)
+        {
+
+            // Draw rectangle displaying the bounding box
+            int top, left, width, height;
+            top = (*it).roi.y;
+            left = (*it).roi.x;
+            width = (*it).roi.width;
+            height = (*it).roi.height;
+            cv::rectangle(visImg, cv::Point(left, top), cv::Point(left + width, top + height), cv::Scalar(0, 255, 0), 2);
+
+            string label = cv::format("%.2f", (*it).confidence);
+            label = classes[((*it).classID)] + ":" + label;
+
+            // Display label at the top of the bounding box
+            int baseLine;
+            cv::Size labelSize = getTextSize(label, cv::FONT_ITALIC, 0.5, 1, &baseLine);
+            top = max(top, labelSize.height);
+            rectangle(visImg, cv::Point(left, top - round(1.5 * labelSize.height)), cv::Point(left + round(1.5 * labelSize.width), top + baseLine), cv::Scalar(255, 255, 255), cv::FILLED);
+            cv::putText(visImg, label, cv::Point(left, top), cv::FONT_ITALIC, 0.75, cv::Scalar(0, 0, 0), 1);
+        }
+
+        string windowName = "Object classification";
+        cv::namedWindow(windowName, 1);
+        cv::imshow(windowName, visImg);
+        cv::waitKey(0); // wait for key to be pressed
+    }
+
     // show results
     if (bVis)
     {
@@ -129,28 +182,6 @@ int main()
             rectangle(visImg, cv::Point(left, top - round(1.5 * labelSize.height)), cv::Point(left + round(1.5 * labelSize.width), top + baseLine), cv::Scalar(255, 255, 255), cv::FILLED);
             cv::putText(visImg, label, cv::Point(left, top), cv::FONT_ITALIC, 0.75, cv::Scalar(0, 0, 0), 1);
         }
-
-        // for (auto it = boxes.begin(); it != boxes.end(); ++it)
-        // {
-
-        //     // Draw rectangle displaying the bounding box
-        //     int top, left, width, height;
-        //     top = (*it).y;
-        //     left = (*it).x;
-        //     width = (*it).width;
-        //     height = (*it).height;
-        //     cv::rectangle(visImg, cv::Point(left, top), cv::Point(left + width, top + height), cv::Scalar(0, 255, 0), 2);
-
-        //     string label = cv::format("%.2f", (*it).confidence);
-        //     label = classes[((*it).classID)] + ":" + label;
-
-        //     Display label at the top of the bounding box int baseLine;
-        //     cv::Size labelSize = getTextSize(label, cv::FONT_ITALIC, 0.5, 1, &baseLine);
-        //     top = max(top, labelSize.height);
-
-        //     rectangle(visImg, cv::Point(left, top - round(1.5 * labelSize.height)), cv::Point(left + round(1.5 * labelSize.width), top + baseLine), cv::Scalar(255, 255, 255), cv::FILLED);
-        //     cv::putText(visImg, label, cv::Point(left, top), cv::FONT_ITALIC, 0.75, cv::Scalar(0, 0, 0), 1);
-        // }
 
         string windowName = "Object classification";
         cv::namedWindow(windowName, 1);
