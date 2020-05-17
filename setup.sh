@@ -1,7 +1,11 @@
 chmod +x setup.sh
 
-cd dat/yolo
+cd dat
+mkdir yolo
+cd yolo
 
 wget https://pjreddie.com/media/files/yolov3.weights
 wget https://github.com/pjreddie/darknet/blob/master/cfg/yolov3.cfg?raw=true -O ./yolov3.cfg
 wget https://github.com/pjreddie/darknet/blob/master/data/coco.names?raw=true -O ./coco.names
+
+cd ../../
